@@ -1,0 +1,5 @@
+.sisyphus/
+cv_danylo_kliuiev_software_engineer.pdf
+site/node_modules/
+site/dist/
+site/.astro/
