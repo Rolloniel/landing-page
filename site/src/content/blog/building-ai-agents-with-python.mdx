@@ -1,0 +1,79 @@
+---
+title: "Building AI Agents with Python: Patterns That Actually Work"
+description: "Practical patterns for multi-agent systems from production deployments. Code examples, architecture decisions, and lessons learned."
+pubDate: 2026-02-15
+tags: ["ai-agents", "python", "architecture"]
+draft: false
+---
+
+After building a dozen agent systems in production, one pattern keeps working: separate concerns, explicit state, and tool-first design. This post covers what actually works when you move beyond toy examples.
+
+## The Problem with Single-Agent Systems
+
+Single-agent systems hit a wall fast. You add more tools, the context window fills up. You add more logic, the prompt becomes unmaintainable. You add more features, the system becomes brittle.
+
+The real issue isn't the agent—it's that you're trying to solve multiple problems with one system. Routing, tool selection, state management, error recovery. Each deserves its own component.
+
+## Pattern 1: Tool-Using Agents
+
+Start with explicit tool definitions. Decorators work well for this:
+
+```python
+from typing import Callable
+from dataclasses import dataclass
+
+@dataclass
+class Tool:
+    name: str
+    description: str
+    func: Callable
+
+def tool(name: str, description: str):
+    def decorator(func: Callable) -> Tool:
+        return Tool(name=name, description=description, func=func)
+    return decorator
+
+@tool("fetch_data", "Retrieve data from the API")
+def fetch_data(query: str) -> dict:
+    return {"query": query, "results": []}
+
+@tool("process_results", "Transform and filter results")
+def process_results(data: dict) -> list:
+    return [item for item in data.get("results", [])]
+
+agent_tools = [fetch_data, process_results]
+```
+
+This approach keeps tools testable, composable, and easy to document.
+
+## Pattern 2: Multi-Agent Orchestration
+
+When you need multiple agents, use explicit message passing:
+
+```python
+class Agent:
+    def __init__(self, name: str, tools: list):
+        self.name = name
+        self.tools = {t.name: t.func for t in tools}
+    
+    def process(self, message: str) -> str:
+        # Route to appropriate tool
+        return f"Agent {self.name} processed: {message}"
+
+coordinator = {"agents": {}, "state": {}}
+```
+
+This keeps agents isolated and makes debugging straightforward.
+
+## What Actually Works
+
+- **Explicit tool definitions** over prompt-based tool discovery
+- **Separate agents by responsibility** rather than capability
+- **Message passing** instead of shared state
+- **Structured outputs** from every agent step
+- **Logging at every boundary** between components
+- **Test tools independently** before integrating with agents
+
+The systems that survive production are the ones where you can trace exactly what happened at each step. That means explicit state, clear boundaries, and no magic.
+
+Build for debuggability first. Performance optimization comes after you understand what's actually happening.

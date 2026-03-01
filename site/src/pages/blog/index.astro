@@ -1,0 +1,54 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+const posts = await getCollection('blog');
+const sortedPosts = posts
+  .filter(post => !post.data.draft)
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+// Pre-render all posts to get reading time
+const postsWithReadingTime = await Promise.all(
+  sortedPosts.map(async (post) => {
+    const { remarkPluginFrontmatter } = await render(post);
+    return { post, remarkPluginFrontmatter };
+  })
+);
+---
+
+<BaseLayout title="Blog | Danylo Kliuiev" description="AI automation, Python engineering, and building in public.">
+  <div class="max-w-6xl mx-auto py-16 md:py-24 px-4">
+    <h1 class="font-mono text-3xl md:text-4xl font-bold mb-12">Blog</h1>
+    
+    <div class="space-y-8">
+      {postsWithReadingTime.map(({ post, remarkPluginFrontmatter }) => (
+        <article class="border-b border-gray-200 pb-8">
+          <a href={`/blog/${post.id}/`} class="group block">
+            <h2 class="font-mono text-xl font-semibold text-gray-900 group-hover:text-brand-green mb-2 transition-colors">
+              {post.data.title}
+            </h2>
+          </a>
+          <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500 mb-3 font-mono">
+            <time datetime={post.data.pubDate.toISOString()}>
+              {post.data.pubDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </time>
+            <span>•</span>
+            <span>{remarkPluginFrontmatter.minutesRead}</span>
+          </div>
+          <p class="text-gray-600 mb-4 leading-relaxed">{post.data.description}</p>
+          <div class="flex flex-wrap gap-2">
+            {post.data.tags.map(tag => (
+              <span class="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600 font-mono">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
